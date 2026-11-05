@@ -183,15 +183,99 @@ def calculate_weather_summary(df_valid):
     return monthly_summary
 
 
+
 def generate_weather_plots(df_valid):
-    """
-    Generate Temperature Trend (line chart) and Monthly Rainfall Comparison (bar chart)
-    using Matplotlib.
-    Charts explicitly identify location and period in their titles.
-    Returns base64 encoded image strings.
-    """
     if df_valid.empty:
         return None, None
+
+    location = df_valid['location'].iloc[0]
+    start_date = df_valid['observation_date'].min().strftime('%b %Y')
+    end_date = df_valid['observation_date'].max().strftime('%b %Y')
+
+    period_str = (
+        f"{start_date} - {end_date}"
+        if start_date != end_date else start_date
+    )
+
+    df_sorted = df_valid.sort_values('observation_date').copy()
+    df_sorted['month'] = df_sorted['observation_date'].dt.strftime('%b %Y')
+
+    monthly = df_sorted.groupby('month', sort=False).agg({
+        'temperature': ['min', 'max', 'mean'],
+        'rainfall': 'sum'
+    })
+
+    months = monthly.index.tolist()
+
+    # Temperature chart
+    fig, ax = plt.subplots(figsize=(7, 3.5), dpi=60)
+
+    try:
+        ax.plot(months, monthly[('temperature', 'max')],
+                marker='o', label='Max Temp (°C)', linewidth=1.5)
+
+        ax.plot(months, monthly[('temperature', 'mean')],
+                marker='s', label='Avg Temp (°C)',
+                linewidth=1.5, linestyle='--')
+
+        ax.plot(months, monthly[('temperature', 'min')],
+                marker='^', label='Min Temp (°C)', linewidth=1.5)
+
+        ax.set_title(f'Temperature Trends: {location} ({period_str})')
+        ax.set_xlabel('Month')
+        ax.set_ylabel('Temperature (°C)')
+        ax.grid(True, linestyle=':', alpha=0.6)
+        ax.legend()
+        ax.tick_params(axis='x', labelrotation=35)
+
+        buf_temp = io.BytesIO()
+        fig.savefig(buf_temp, format='png', dpi=60)
+        temp_chart_base64 = base64.b64encode(
+            buf_temp.getvalue()
+        ).decode('utf-8')
+
+    finally:
+        plt.close(fig)
+
+    # Rainfall chart
+    fig, ax = plt.subplots(figsize=(7, 3.5), dpi=60)
+
+    try:
+        rainfall = monthly[('rainfall', 'sum')]
+
+        bars = ax.bar(months, rainfall, width=0.55)
+
+        ax.set_title(
+            f'Monthly Rainfall Comparison: {location} ({period_str})'
+        )
+        ax.set_xlabel('Month')
+        ax.set_ylabel('Total Rainfall (mm)')
+        ax.grid(axis='y', linestyle=':', alpha=0.6)
+
+        for bar in bars:
+            height = bar.get_height()
+            if height > 0:
+                ax.annotate(
+                    f'{height:.1f}',
+                    xy=(bar.get_x() + bar.get_width() / 2, height),
+                    xytext=(0, 3),
+                    textcoords='offset points',
+                    ha='center',
+                    fontsize=8
+                )
+
+        ax.tick_params(axis='x', labelrotation=35)
+
+        buf_rain = io.BytesIO()
+        fig.savefig(buf_rain, format='png', dpi=60)
+        rain_chart_base64 = base64.b64encode(
+            buf_rain.getvalue()
+        ).decode('utf-8')
+
+    finally:
+        plt.close(fig)
+
+    return temp_chart_base64, rain_chart_base64
 
     # Determine location and period for chart titles
     location = df_valid['location'].iloc[0]
