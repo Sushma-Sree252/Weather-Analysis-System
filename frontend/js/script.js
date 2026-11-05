@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     // Dynamically resolve API Base URL (Supports Flask :5000 and VS Code Live Server :5500)
-    const API_BASE = window.location.port === '5000' ? '' : 'http://127.0.0.1:5000';
+    const API_BASE = '';
 
     // DOM References - Ingestion
     const dropZone = document.getElementById('dropZone');
