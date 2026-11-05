@@ -1,9 +1,11 @@
+
 import io
 import base64
 import pandas as pd
 import numpy as np
 import matplotlib
-matplotlib.use('Agg')  # Headless backend for web server
+
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # Documented Units
@@ -12,6 +14,7 @@ UNITS = {
     'humidity': '%',
     'rainfall': 'mm'
 }
+
 
 def validate_and_clean_data(csv_file):
     """
@@ -30,7 +33,7 @@ def validate_and_clean_data(csv_file):
 
     # Expected column mapping (case-insensitive)
     cols = {c.strip().lower(): c for c in df.columns}
-    
+
     # Required columns
     req_date = cols.get('observation_date') or cols.get('date')
     req_loc = cols.get('location') or cols.get('city')
@@ -49,7 +52,7 @@ def validate_and_clean_data(csv_file):
     valid_row_dicts = []
 
     for idx, row in df.iterrows():
-        row_num = idx + 2  # 1-based index plus header row
+        row_num = idx + 2
         date_raw = str(row[req_date]).strip()
         loc_raw = str(row[req_loc]).strip()
         temp_raw = row[req_temp]
@@ -64,7 +67,6 @@ def validate_and_clean_data(csv_file):
             date_str = parsed_date.strftime('%Y-%m-%d')
         except Exception:
             row_errors.append(f"Invalid date format: '{date_raw}'")
-            parsed_date = None
 
         # 2. Validate Location
         if not loc_raw or loc_raw.lower() in ['nan', 'null', 'none']:
@@ -76,9 +78,13 @@ def validate_and_clean_data(csv_file):
             if np.isnan(temp_val):
                 row_errors.append("Missing temperature value")
             elif temp_val < -60 or temp_val > 60:
-                row_errors.append(f"Temperature {temp_val}°C out of realistic range (-60 to 60°C)")
+                row_errors.append(
+                    f"Temperature {temp_val}°C out of realistic range (-60 to 60°C)"
+                )
         except (ValueError, TypeError):
-            row_errors.append(f"Invalid non-numeric temperature: '{temp_raw}'")
+            row_errors.append(
+                f"Invalid non-numeric temperature: '{temp_raw}'"
+            )
             temp_val = None
 
         # 4. Validate Humidity (0% to 100%)
@@ -87,9 +93,13 @@ def validate_and_clean_data(csv_file):
             if np.isnan(hum_val):
                 row_errors.append("Missing humidity value")
             elif hum_val < 0 or hum_val > 100:
-                row_errors.append(f"Humidity {hum_val}% out of range (0% to 100%)")
+                row_errors.append(
+                    f"Humidity {hum_val}% out of range (0% to 100%)"
+                )
         except (ValueError, TypeError):
-            row_errors.append(f"Invalid non-numeric humidity: '{hum_raw}'")
+            row_errors.append(
+                f"Invalid non-numeric humidity: '{hum_raw}'"
+            )
             hum_val = None
 
         # 5. Validate Rainfall (>= 0 mm)
@@ -98,9 +108,13 @@ def validate_and_clean_data(csv_file):
             if np.isnan(rain_val):
                 row_errors.append("Missing rainfall value")
             elif rain_val < 0:
-                row_errors.append(f"Rainfall {rain_val} mm cannot be negative")
+                row_errors.append(
+                    f"Rainfall {rain_val} mm cannot be negative"
+                )
         except (ValueError, TypeError):
-            row_errors.append(f"Invalid non-numeric rainfall: '{rain_raw}'")
+            row_errors.append(
+                f"Invalid non-numeric rainfall: '{rain_raw}'"
+            )
             rain_val = None
 
         # Transparent validation logging
@@ -118,7 +132,10 @@ def validate_and_clean_data(csv_file):
             })
         else:
             # Valid record for SQL & analysis
-            valid_records.append((date_str, loc_raw, temp_val, hum_val, rain_val))
+            valid_records.append(
+                (date_str, loc_raw, temp_val, hum_val, rain_val)
+            )
+
             valid_row_dicts.append({
                 'observation_date': pd.to_datetime(date_str),
                 'location': loc_raw,
@@ -183,11 +200,16 @@ def calculate_weather_summary(df_valid):
     return monthly_summary
 
 
-
 def generate_weather_plots(df_valid):
+    """
+    Generate Temperature Trend and Monthly Rainfall Comparison charts.
+    Returns base64 encoded image strings.
+    Uses reduced image resolution to help reduce memory usage.
+    """
     if df_valid.empty:
         return None, None
 
+    # Determine location and period for chart titles
     location = df_valid['location'].iloc[0]
     start_date = df_valid['observation_date'].min().strftime('%b %Y')
     end_date = df_valid['observation_date'].max().strftime('%b %Y')
@@ -197,6 +219,7 @@ def generate_weather_plots(df_valid):
         if start_date != end_date else start_date
     )
 
+    # Prepare monthly data
     df_sorted = df_valid.sort_values('observation_date').copy()
     df_sorted['month'] = df_sorted['observation_date'].dt.strftime('%b %Y')
 
@@ -207,29 +230,59 @@ def generate_weather_plots(df_valid):
 
     months = monthly.index.tolist()
 
-    # Temperature chart
-    fig, ax = plt.subplots(figsize=(7, 3.5), dpi=60)
+    # 1. Temperature Trend Plot (Line Chart)
+    fig, ax = plt.subplots(figsize=(9, 4.5), dpi=60)
 
     try:
-        ax.plot(months, monthly[('temperature', 'max')],
-                marker='o', label='Max Temp (°C)', linewidth=1.5)
+        ax.plot(
+            months,
+            monthly[('temperature', 'max')],
+            marker='o',
+            color='#e74c3c',
+            label='Max Temp (°C)',
+            linewidth=2
+        )
 
-        ax.plot(months, monthly[('temperature', 'mean')],
-                marker='s', label='Avg Temp (°C)',
-                linewidth=1.5, linestyle='--')
+        ax.plot(
+            months,
+            monthly[('temperature', 'mean')],
+            marker='s',
+            color='#e67e22',
+            label='Avg Temp (°C)',
+            linewidth=2,
+            linestyle='--'
+        )
 
-        ax.plot(months, monthly[('temperature', 'min')],
-                marker='^', label='Min Temp (°C)', linewidth=1.5)
+        ax.plot(
+            months,
+            monthly[('temperature', 'min')],
+            marker='^',
+            color='#3498db',
+            label='Min Temp (°C)',
+            linewidth=2
+        )
 
-        ax.set_title(f'Temperature Trends: {location} ({period_str})')
-        ax.set_xlabel('Month')
-        ax.set_ylabel('Temperature (°C)')
+        ax.set_title(
+            f'Temperature Trends: {location} ({period_str})',
+            fontsize=13,
+            fontweight='bold',
+            pad=12
+        )
+
+        ax.set_xlabel('Month', fontsize=11, labelpad=8)
+        ax.set_ylabel('Temperature (°C)', fontsize=11, labelpad=8)
         ax.grid(True, linestyle=':', alpha=0.6)
-        ax.legend()
+        ax.legend(loc='best')
+
         ax.tick_params(axis='x', labelrotation=35)
+        for label in ax.get_xticklabels():
+            label.set_ha('right')
+
+        fig.tight_layout()
 
         buf_temp = io.BytesIO()
         fig.savefig(buf_temp, format='png', dpi=60)
+
         temp_chart_base64 = base64.b64encode(
             buf_temp.getvalue()
         ).decode('utf-8')
@@ -237,23 +290,36 @@ def generate_weather_plots(df_valid):
     finally:
         plt.close(fig)
 
-    # Rainfall chart
-    fig, ax = plt.subplots(figsize=(7, 3.5), dpi=60)
+    # 2. Rainfall Comparison Plot (Bar Chart)
+    fig, ax = plt.subplots(figsize=(9, 4.5), dpi=60)
 
     try:
         rainfall = monthly[('rainfall', 'sum')]
 
-        bars = ax.bar(months, rainfall, width=0.55)
+        bars = ax.bar(
+            months,
+            rainfall,
+            color='#2980b9',
+            width=0.55,
+            edgecolor='#1b4f72',
+            alpha=0.85
+        )
 
         ax.set_title(
-            f'Monthly Rainfall Comparison: {location} ({period_str})'
+            f'Monthly Rainfall Comparison: {location} ({period_str})',
+            fontsize=13,
+            fontweight='bold',
+            pad=12
         )
-        ax.set_xlabel('Month')
-        ax.set_ylabel('Total Rainfall (mm)')
+
+        ax.set_xlabel('Month', fontsize=11, labelpad=8)
+        ax.set_ylabel('Total Rainfall (mm)', fontsize=11, labelpad=8)
         ax.grid(axis='y', linestyle=':', alpha=0.6)
 
+        # Add data values on top of bars
         for bar in bars:
             height = bar.get_height()
+
             if height > 0:
                 ax.annotate(
                     f'{height:.1f}',
@@ -261,93 +327,25 @@ def generate_weather_plots(df_valid):
                     xytext=(0, 3),
                     textcoords='offset points',
                     ha='center',
-                    fontsize=8
+                    va='bottom',
+                    fontsize=9
                 )
 
         ax.tick_params(axis='x', labelrotation=35)
 
+        for label in ax.get_xticklabels():
+            label.set_ha('right')
+
+        fig.tight_layout()
+
         buf_rain = io.BytesIO()
         fig.savefig(buf_rain, format='png', dpi=60)
+
         rain_chart_base64 = base64.b64encode(
             buf_rain.getvalue()
         ).decode('utf-8')
 
     finally:
         plt.close(fig)
-
-    return temp_chart_base64, rain_chart_base64
-
-    # Determine location and period for chart titles
-    location = df_valid['location'].iloc[0]
-    start_date = df_valid['observation_date'].min().strftime('%b %Y')
-    end_date = df_valid['observation_date'].max().strftime('%b %Y')
-    period_str = f"{start_date} - {end_date}" if start_date != end_date else start_date
-
-    # Prepare monthly data
-    df_sorted = df_valid.sort_values('observation_date').copy()
-    df_sorted['month'] = df_sorted['observation_date'].dt.strftime('%b %Y')
-    
-    # Preserve month ordering
-    months = df_sorted['month'].unique()
-    
-    monthly_temp_min = []
-    monthly_temp_max = []
-    monthly_temp_avg = []
-    monthly_rainfall = []
-
-    for m in months:
-        subset = df_sorted[df_sorted['month'] == m]
-        monthly_temp_min.append(np.min(subset['temperature']))
-        monthly_temp_max.append(np.max(subset['temperature']))
-        monthly_temp_avg.append(np.mean(subset['temperature']))
-        monthly_rainfall.append(np.sum(subset['rainfall']))
-
-    # 1. Temperature Trend Plot (Line Chart)
-    fig, ax = plt.subplots(figsize=(9, 4.5), dpi=100)
-    ax.plot(months, monthly_temp_max, marker='o', color='#e74c3c', label='Max Temp (°C)', linewidth=2)
-    ax.plot(months, monthly_temp_avg, marker='s', color='#e67e22', label='Avg Temp (°C)', linewidth=2, linestyle='--')
-    ax.plot(months, monthly_temp_min, marker='^', color='#3498db', label='Min Temp (°C)', linewidth=2)
-
-    ax.set_title(f'Temperature Trends: {location} ({period_str})', fontsize=13, fontweight='bold', pad=12)
-    ax.set_xlabel('Month', fontsize=11, labelpad=8)
-    ax.set_ylabel('Temperature (°C)', fontsize=11, labelpad=8)
-    ax.grid(True, linestyle=':', alpha=0.6)
-    ax.legend(loc='best')
-    plt.xticks(rotation=35, ha='right')
-    plt.tight_layout()
-
-    buf_temp = io.BytesIO()
-    plt.savefig(buf_temp, format='png')
-    plt.close(fig)
-    buf_temp.seek(0)
-    temp_chart_base64 = base64.b64encode(buf_temp.getvalue()).decode('utf-8')
-
-    # 2. Rainfall Comparison Plot (Bar Chart)
-    fig, ax = plt.subplots(figsize=(9, 4.5), dpi=100)
-    bars = ax.bar(months, monthly_rainfall, color='#2980b9', width=0.55, edgecolor='#1b4f72', alpha=0.85)
-
-    ax.set_title(f'Monthly Rainfall Comparison: {location} ({period_str})', fontsize=13, fontweight='bold', pad=12)
-    ax.set_xlabel('Month', fontsize=11, labelpad=8)
-    ax.set_ylabel('Total Rainfall (mm)', fontsize=11, labelpad=8)
-    ax.grid(axis='y', linestyle=':', alpha=0.6)
-    
-    # Add data values on top of bars
-    for bar in bars:
-        height = bar.get_height()
-        if height > 0:
-            ax.annotate(f'{height:.1f}',
-                        xy=(bar.get_x() + bar.get_width() / 2, height),
-                        xytext=(0, 3),
-                        textcoords="offset points",
-                        ha='center', va='bottom', fontsize=9)
-
-    plt.xticks(rotation=35, ha='right')
-    plt.tight_layout()
-
-    buf_rain = io.BytesIO()
-    plt.savefig(buf_rain, format='png')
-    plt.close(fig)
-    buf_rain.seek(0)
-    rain_chart_base64 = base64.b64encode(buf_rain.getvalue()).decode('utf-8')
 
     return temp_chart_base64, rain_chart_base64
