@@ -198,16 +198,12 @@ http://127.0.0.1:5000
 
 ---
 
-## 💡 Viva / Presentation Q&A Preparation
-
-### Q1: Why use a relational database (MySQL) when the data originates from a CSV?
-> **Answer:** In real-world data pipelines, CSV files are transient input streams. Storing validated records in MySQL ensures data integrity, prevents duplicate entries via keys, provides ACID transactions, and enables historical querying across multiple ingestion batches.
-
-### Q2: How does the system handle missing or corrupted data?
-> **Answer:** The system uses strict schema validation in Python (`analysis.py`). Rather than crashing or silently altering data, it quarantines problematic rows, logs the specific violation reason (e.g., non-numeric string, out-of-range value, invalid date), and reports them transparently in the Data-Quality Audit section.
-
-### Q3: Why does this system avoid forecasting?
-> **Answer:** Meteorological forecasting requires numerical weather prediction (NWP) models, satellite assimilation, and differential equations. This system's objective is strictly descriptive and exploratory data analysis (EDA) of recorded historical observations.
-
-### Q4: How are the charts rendered without saving files to the hard drive?
-> **Answer:** Matplotlib runs in headless mode (`Agg` backend). Figures are rendered in-memory into a binary byte buffer (`io.BytesIO`), encoded into Base64 format, and transmitted directly as data URIs to the browser frontend. This eliminates disk I/O bottlenecks and file permission errors.
+My Contribution
+Sushma Sree Anepakula - Backend Development
+I contributed to the development of the Weather Analysis System by working on the backend implementation and project integration.
+- Worked with Python and Flask to develop backend functionality.
+- Contributed to database connectivity using MySQL.
+- Worked on processing and validating weather data.
+- Assisted in integrating the backend with the frontend.
+- Contributed to testing and debugging application functionality.
+- Participated in project deployment and GitHub repository management.
